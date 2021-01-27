@@ -3,26 +3,30 @@ import React, { Component } from 'react'
 import {NavbarHeader} from './components/NavbarHeader'
 import {Footer} from './components/Footer'
 import {ImageDisplay} from './components/ImageDisplay'
-import {Container, Row, Col} from 'react-bootstrap';
+import {Container, Row, Col, Alert} from 'react-bootstrap';
 import {UserInterface} from './components/UserInterface';
 import Axios from 'axios';
 import { base64StringToBlob } from 'blob-util';
+import ComparePopup from './components/ComparePopup'
 
 const API_URL = process.env.REACT_APP_API_URL;
-// const API_ACCESS_KEY = process.env.REACT_APP_API_ACCESS_KEY;
-const API_ACCESS_KEY = "\xf9'\xe4p(\xa9\x12\x1a!\x94\x8d\x1c\x99l\xc7\xb7e\xc7c\x86\x02MJ\xa0";
+const API_ACCESS_KEY = process.env.REACT_APP_API_ACCESS_KEY;
+// const API_ACCESS_KEY = "\xf9'\xe4p(\xa9\x12\x1a!\x94\x8d\x1c\x99l\xc7\xb7e\xc7c\x86\x02MJ\xa0";
 
 class App extends Component {
   state = {
     imageInput: null,
     imageOutput: null,
-    imageOutputBlob: null,
+    loading: false,
+    error: false,
+    errorMsg: '',
+    comparePopupDisplay: false,
     
   }
 
   sendImageToApi = (img) => {
     const headers = {
-      'ACCESS_KEY': API_ACCESS_KEY
+      'Authorization': API_ACCESS_KEY
     } 
     const formData = new FormData();
     // Update the formData object 
@@ -36,19 +40,20 @@ class App extends Component {
       // this.setState({imageOutput: response.data})
       const blob = base64StringToBlob(response.data, 'image/jpg')
       // console.log('Blob: ', blob);
-      const image = new File([blob],'image-colorized.jpg', {type: 'image/jpg'})
+      const image = new File([blob],this.state.imageInput.name.slice(0, -4)+'-colorized.jpg', {type: 'image/jpg'})
       // console.log('File: ', image);
       // const url = URL.createObjectURL(blob);
       // console.log('Blob url: ', url);
       // const url2 = URL.createObjectURL(image);
       // console.log('File url: ', url2);
 
-
-      this.setState({imageOutput: image})     
-
+      // this.setState({loading: false})    
+      this.setState({imageOutput: image, loading: false})
     })
     .catch((error) => {
       console.log('API call error: ', error)
+      const msg = 'API server-side error occured while processing an image. Please try again or change image format.'
+      this.setState({imageOutput: null, error: true, errorMsg: msg, loading: false})
     });
 
   }
@@ -60,11 +65,19 @@ class App extends Component {
   }
 
   onColorize = () => {    
-    if (this.state.imageInput !== null)
+    if (this.state.imageInput !== null){
+      this.setState({loading: true})
       this.sendImageToApi(this.state.imageInput);
+      
+    }
   }
 
-  onCompare = (e) => {}
+  onCompare = (e) => {
+    if (this.state.imageInput !== null && this.state.imageOutput !== null){
+      this.setState({comparePopupDisplay: true})
+    }
+    
+  }
 
   onDownload = (e) => {
     if (this.state.imageOutput !== null){
@@ -74,18 +87,35 @@ class App extends Component {
       a.download = this.state.imageOutput.name;
       a.click();
     }
-    
-					
+  }
+
+  closeComparePopup = () => {
+    this.setState({comparePopupDisplay: false})
   }
 
   render(){
     return (
-      <div className="App">
+      <div className="App" style={{}}>
         <NavbarHeader/>
+        <Alert 
+          style={{marginTop: 0}}
+          variant="danger" 
+          show={this.state.error} 
+          onClose={() => this.setState({error: false, errorMsg: ''})} 
+          dismissible>
+          <Alert.Heading>Oops! You got an error!</Alert.Heading>
+            <p>
+              {this.state.errorMsg}
+            </p>
+        </Alert>
         <Container fluid id="App-content">
           <Row>
             <Col id="left-container">
-              <ImageDisplay imageInput={this.state.imageInput} imageOutput={this.state.imageOutput} />
+              <ImageDisplay
+                imageInput={this.state.imageInput} 
+                imageOutput={this.state.imageOutput} 
+                loading={this.state.loading}
+              />
             </Col>
             <Col id="right-container">
               <UserInterface
@@ -94,12 +124,22 @@ class App extends Component {
                 onColorize={this.onColorize}
                 onCompare={this.onCompare}
                 onDownload={this.onDownload}
+                colorizeButtonState={this.state.imageInput !== null}
+                downloadButtonState={this.state.imageOutput !== null}
               />
 
             </Col>
           </Row>
         </Container>
         <Footer/>
+        <ComparePopup 
+          visible={this.state.comparePopupDisplay} 
+          onClose={this.closeComparePopup}
+          imageInput={this.state.imageInput}
+          imageOutput={this.state.imageOutput}
+        
+        />
+        
       </div>
     );
   }

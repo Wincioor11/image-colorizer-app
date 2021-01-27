@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import logo192 from '../images/logo192.png'
+import logo from '../images/logo.png'
 import {Navbar} from 'react-bootstrap';
 
 
@@ -10,7 +10,7 @@ export class NavbarHeader extends Component {
                 <Navbar.Brand href="/">
                 <img
                     alt=""
-                    src={logo192}
+                    src={logo}
                     width="50"
                     height="50"
                     // className="d-inline-block align-top"
